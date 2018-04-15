@@ -10,8 +10,11 @@ import numpy as np
 import jieba
 import jieba.posseg as psg
 import jieba.analyse as als
+import gensim
 
 from scipy.misc import imread
+from scipy.cluster.hierarchy import dendrogram, linkage
+
 from wordcloud import WordCloud,ImageColorGenerator
 import matplotlib
 import matplotlib.pyplot as plt
@@ -29,10 +32,13 @@ sentence_delimiters = ['?', '!', ';', '？', '！', '。', '；', '……', '…
 allow_tags = ['an', 'i', 'j', 'l', 'n', 'nr', 'nrfg', 'ns', 'nt', 'nz', 't', 'v', 'vd', 'vn', 'eng']
 
 class TxtWord:
-    def __init__(self,sentences,stop_words_file=None,font='SimHei',figsize=(8,8)):
+    def __init__(self,sentences,stop_words_file=None,font='SimHei',font_size=10,figsize=(8,8)):
         self.sentences=sentences
         self.stop_words=[]
-        self.font=font
+        #todo: add update function for the following parameters
+        self._font=font
+        self._font_size=font_size
+        self._figsize=figsize
         
         self.__text=''
         self.__words={}
@@ -48,6 +54,7 @@ class TxtWord:
         self._cf=FontProperties(font)
         matplotlib.rc('font',family=font)
         matplotlib.rcParams['figure.figsize']=figsize
+        matplotlib.rcParams['font.size']=font_size
     
     def _inner_init(self,init_txt_only=False):
         if len(self.__text)==0:
@@ -349,11 +356,11 @@ class TxtWord:
         else:
             ax = fig.add_subplot(111)
         fig.subplots_adjust(0,0,1)
-        nx.draw_networkx_nodes(wgraph, pos, node_size=sizes, node_color=degrees,alpha=0.4,font_family=self.font,fontproperties = self._cf)
-        nx.draw_networkx_labels(wgraph, pos, font_size=24, font_weight='bold',font_family=self.font, fontproperties = self._cf)
+        nx.draw_networkx_nodes(wgraph, pos, node_size=sizes, node_color=degrees,alpha=0.4,font_family=self._font,fontproperties = self._cf)
+        nx.draw_networkx_labels(wgraph, pos, font_size=24, font_weight='bold',font_family=self._font, fontproperties = self._cf)
         nx.draw_networkx_edges(wgraph, pos, width=width, edge_color=width,edge_cmap=plt.cm.cool)#plt.cm.Blues)
         if edge_label:
-            nx.draw_networkx_edge_labels(wgraph, pos, edge_labels=labels, font_size=18,font_family=self.font, fontproperties = self._cf)
+            nx.draw_networkx_edge_labels(wgraph, pos, edge_labels=labels, font_size=18,font_family=self._font, fontproperties = self._cf)
         ax.set_title('Node color:degree, size:count, edge: co-occurrence count',fontsize=18)
         ax.set_xticks([])
         ax.set_yticks([])
@@ -365,3 +372,31 @@ class TxtWord:
         print('\nGraph centrality')
         for node, cent in c:
             print("%15s: %.3g" % (node, cent))
+    
+    def train_word2vec(self,sen_words,min_count=2):
+        return gensim.models.Word2Vec(sen_words, min_count=min_count)
+        
+    def plot_dendrogram(self,w2v_model, keywords):
+        #based on https://stackoverflow.com/questions/41462711/python-calculate-hierarchical-clustering-of-word2vec-vectors-and-plot-the-resu
+        #l = linkage(w2v_model.wv.syn0, method='complete', metric='seuclidean')
+        
+        vec_list=[]
+        for kw in keywords:
+            vec_list.append(w2v_model[kw])
+        l = linkage(vec_list, method='ward', metric='euclidean')
+        
+        # calculate full dendrogram
+        plt.figure(figsize=(25, 10))
+        plt.title('Hierarchical Clustering Dendrogram')
+        plt.ylabel('word')
+        plt.xlabel('distance')
+        dendrogram(
+            l,
+            leaf_rotation=90.,  # rotates the x axis labels
+            leaf_font_size=self._font_size,  # font size for the x axis labels
+            #orientation='left',
+            #leaf_label_func=lambda v: str(w2v_model.wv.index2word[v])
+            leaf_label_func=lambda v: str(keywords[v])
+        )
+        
+        plt.show()
