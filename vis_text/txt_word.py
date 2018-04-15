@@ -184,7 +184,7 @@ class TxtWord:
         for word in words:
             freqs[word]=freqs.get(word,0)+1
         
-        sorted_x=sorted(freqs.items(),key=operator.itemgetter(1),reverse=True)
+        sorted_x=sorted(freqs.items(),key=operator.itemgetter(1),reverse=False)
         
         return sorted_x
     
@@ -237,11 +237,11 @@ class TxtWord:
         fig = plt.figure()
         ax = fig.add_subplot(111)
 
-        if n_words<=20:
+        if n_words<=25:
             # Only show bars and x labels for small histograms, they don't make sense otherwise
             ax.bar(ind, counts)
             ax.set_xticks(ind)
-            ax.set_xticklabels(words, rotation=45)
+            ax.set_xticklabels(words, rotation=45,fontproperties = self._cf)
             fig.subplots_adjust(bottom=0.25)
         else:
             # For larger ones, do a step plot
@@ -353,7 +353,7 @@ class TxtWord:
         nx.draw_networkx_labels(wgraph, pos, font_size=24, font_weight='bold',font_family=self.font, fontproperties = self._cf)
         nx.draw_networkx_edges(wgraph, pos, width=width, edge_color=width,edge_cmap=plt.cm.cool)#plt.cm.Blues)
         if edge_label:
-            nx.draw_networkx_edge_labels(wgraph, pos, edge_labels=labels, font_size=18,font_family=self.font, fontproperties = self_cf)
+            nx.draw_networkx_edge_labels(wgraph, pos, edge_labels=labels, font_size=18,font_family=self.font, fontproperties = self._cf)
         ax.set_title('Node color:degree, size:count, edge: co-occurrence count',fontsize=18)
         ax.set_xticks([])
         ax.set_yticks([])
