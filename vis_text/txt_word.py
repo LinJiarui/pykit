@@ -18,6 +18,10 @@ import matplotlib.pyplot as plt
 from matplotlib.font_manager import FontProperties
 import networkx as nx
 
+def get_default_img_mask():
+    d = os.path.dirname(os.path.realpath(__file__))
+    return os.path.join(d, 'cloud.jpg')
+
 def get_default_stop_words_file():
     d = os.path.dirname(os.path.realpath(__file__))
     return os.path.join(d, 'stopwords.txt')
@@ -124,11 +128,16 @@ class TxtWord:
                 result.append(sarr)
         return result
     
-    def gen_cloud(self,words,max_words=250,imgmask='cloud.jpg',recolor=False):
+    def gen_cloud(self,words,max_words=250,mask_img='',recolor=False):
         seg_space=' '.join(words)
         #wordcloud默认不支持中文，这里的font_path需要指向中文字体，不然得到的词云全是乱码
         #在初始化WordCloud时增加collocations=False信息，以避免文字重复
         fwc=None
+
+        imgmask=get_default_img_mask()
+        if len(mask_img)>0:
+            imgmask=mask_img
+        
         if len(imgmask)==0:
             fwc=WordCloud(font_path='msyh.ttc',
                 max_words=max_words,
@@ -199,27 +208,25 @@ class TxtWord:
         n : int
           The number of least/most frequent words to print."""
         
-        items = sort_freqs(freqs) if isinstance(freqs, dict) else freqs
         print('Number of unique words: {}'.format(len(freqs)))
         print()
         print('{} least frequent words:'.format(n))
-        self._print_vk(items[:n])
+        self._print_vk(freqs[:n])
         print()
         print('{} most frequent words:'.format(n))
-        self._print_vk(items[-n:])
+        self._print_vk(freqs[-n:])
         
     def plot_word_histogram(self,freqs,show=10,title=None):
         """Plot a histogram of word frequencies, limited to the top `show` ones."""
-        sorted_f = sort_freqs(freqs) if isinstance(freqs, dict) else freqs
-
+        
         # Don't show the tail
         if isinstance(show, int):
             # interpret as number of words to show in histogram
-            show_f = sorted_f[-show:]
+            show_f = freqs[-show:]
         else:
             # interpret as a fraction
             start = -int(round(show*len(freqs)))
-            show_f = sorted_f[start:]
+            show_f = freqs[start:]
 
         # Now, extract words and counts, plot
         n_words = len(show_f)
