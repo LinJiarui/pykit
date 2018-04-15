@@ -37,7 +37,12 @@ co_occ=tword.co_occurrences(sentences,keywords)
 wgraph=tword.co_occurrence_graph(freq,co_occ,del_isolated=True,node_cutoff=16,edge_cutoff=4)
 tword.plot_graph(wgraph)
 
-sen_words=tword.seg_sentences()
-w2v_model=tword.train_word2vec(sen_words)
+#w2v_model=tword.get_wv_model()
 #print(w2v_model.wv)
-tword.plot_dendrogram(w2v_model,keywords)
+
+keywords=tword.rank_words(count=50)
+vec_list=tword.get_word_vec(keywords)
+tword.plot_dendrogram(keywords,vec_list)
+
+clusters=tword.kmeans_cluster(vec_list)
+tword.plot_cluster(clusters,keywords,vec_list)

@@ -6,6 +6,7 @@ from collections import Counter
 import operator
 
 import numpy as np
+import pandas as pd
 
 import jieba
 import jieba.posseg as psg
@@ -14,6 +15,7 @@ import gensim
 
 from scipy.misc import imread
 from scipy.cluster.hierarchy import dendrogram, linkage
+from sklearn.manifold import MDS
 
 from wordcloud import WordCloud,ImageColorGenerator
 import matplotlib
@@ -40,9 +42,12 @@ class TxtWord:
         self._font_size=font_size
         self._figsize=figsize
         
+        self._w2v_min_count=2
+        
         self.__text=''
         self.__words={}
         self.__sen_words=[]
+        self.__w2v_model=None
         
         self.stop_words_file = get_default_stop_words_file()
         if type(stop_words_file) is str:
@@ -56,6 +61,12 @@ class TxtWord:
         matplotlib.rcParams['figure.figsize']=figsize
         matplotlib.rcParams['font.size']=font_size
     
+    def _inner_cleanup(self):
+        self.__text=''
+        self.__words={}
+        self.__sen_words=[]
+        self.__w2v_model=None
+    
     def _inner_init(self,init_txt_only=False):
         if len(self.__text)==0:
             self.__text='\n'.join(self.sentences)
@@ -63,6 +74,10 @@ class TxtWord:
         if len(self.__sen_words)==0 and not init_txt_only:
             for sent in self.sentences:
                 self.__sen_words.append(list(psg.cut(sent)))
+        
+        if len(self.__sen_words)>0 and not init_txt_only and self.__w2v_model==None:
+            sen_words=[[w.word for w in sen] for sen in self.__sen_words]
+            self.__w2v_model=gensim.models.Word2Vec(sen_words, min_count=self._w2v_min_count)
     
     def regen_sentences(self):
         self._inner_init(init_txt_only=True)
@@ -373,30 +388,79 @@ class TxtWord:
         for node, cent in c:
             print("%15s: %.3g" % (node, cent))
     
-    def train_word2vec(self,sen_words,min_count=2):
+    def get_wv_model(self,min_count=2):
+        if self._w2v_min_count!=min_count:
+            self._w2v_min_count=min_count
+            self._inner_cleanup()
+            self._inner_init()
+        
+        return self.__w2v_model
+    
+    def train_wv_model(self,sen_words,min_count=2):
         return gensim.models.Word2Vec(sen_words, min_count=min_count)
+    
+    def get_word_vec(self,words):
+        self._inner_init()
+        result=[]
+        for w in words:
+            result.append(self.__w2v_model[w])
         
-    def plot_dendrogram(self,w2v_model, keywords):
+        return result
+    
+    def plot_dendrogram(self,keywords,vec_list):
         #based on https://stackoverflow.com/questions/41462711/python-calculate-hierarchical-clustering-of-word2vec-vectors-and-plot-the-resu
-        #l = linkage(w2v_model.wv.syn0, method='complete', metric='seuclidean')
         
-        vec_list=[]
-        for kw in keywords:
-            vec_list.append(w2v_model[kw])
         l = linkage(vec_list, method='ward', metric='euclidean')
         
         # calculate full dendrogram
         plt.figure(figsize=(25, 10))
         plt.title('Hierarchical Clustering Dendrogram')
-        plt.ylabel('word')
-        plt.xlabel('distance')
+        plt.ylabel('distance')
+        plt.xlabel('word')
         dendrogram(
             l,
             leaf_rotation=90.,  # rotates the x axis labels
             leaf_font_size=self._font_size,  # font size for the x axis labels
             #orientation='left',
-            #leaf_label_func=lambda v: str(w2v_model.wv.index2word[v])
             leaf_label_func=lambda v: str(keywords[v])
         )
         
         plt.show()
+        
+    def kmeans_cluster(self,vec_list,num_clusters=3):
+        from sklearn.cluster import KMeans
+        km = KMeans(n_clusters=num_clusters)
+        km.fit(vec_list)
+        clusters = km.labels_.tolist()
+        return clusters
+
+    def _get_cmap(self,n, name='hsv'):
+        '''Returns a function that maps each index in 0, 1, ..., n-1 to a distinct 
+        RGB color; the keyword argument name must be a standard mpl colormap name.'''
+        return plt.cm.get_cmap(name, n)
+    
+    def plot_cluster(self,clusters,keywords,vec_list):
+        from sklearn.metrics.pairwise import cosine_similarity
+        from sklearn.metrics.pairwise import euclidean_distances
+        dist = 1 - cosine_similarity(vec_list)
+        
+        mds = MDS(n_components=2, dissimilarity="precomputed", random_state=1)
+        pos = mds.fit_transform(dist)  # shape (n_components, n_samples)
+        xs, ys = pos[:, 0], pos[:, 1]
+        
+        #create data frame that has the result of the MDS plus the cluster numbers and keywords
+        df = pd.DataFrame(dict(x=xs, y=ys, label=clusters, keyword=keywords))
+        #group by cluster
+        groups = df.groupby('label')
+        cmp=plt.cm.get_cmap('spring', len(clusters))
+        colors=[cmp(i) for i in range(len(clusters))]
+        
+        fig, ax = plt.subplots()
+        for name, group in groups:
+            ax.scatter(group.x, group.y,color=colors[name],label=name)
+        #add label in x,y position with the label as the keyword
+        for i in range(len(df)):
+            ax.text(df.ix[i]['x'], df.ix[i]['y'], df.ix[i]['keyword'])
+        
+        ax.legend(numpoints=1)  #show legend with only 1 point
+        plt.show() #show the plot    
