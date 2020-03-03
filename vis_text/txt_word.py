@@ -13,7 +13,8 @@ import jieba.posseg as psg
 import jieba.analyse as als
 import gensim
 
-from scipy.misc import imread
+#from scipy.misc import imread
+from imageio import imread
 from scipy.cluster.hierarchy import dendrogram, linkage
 from sklearn.manifold import MDS
 
