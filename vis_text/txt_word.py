@@ -185,9 +185,10 @@ class TxtWord:
             
             return fwc
             
-    def plot_cloud(self,fwc):
+    def plot_cloud(self,fwc,save_to=None):
         plt.imshow(fwc)
         plt.axis('off')
+        if save_to:plt.savefig(save_to,dpi=300)
         plt.show()
     
     def _all_pairs(self,items):
@@ -239,7 +240,7 @@ class TxtWord:
         print('{} most frequent words:'.format(n))
         self._print_vk(freqs[-n:])
         
-    def plot_word_histogram(self,freqs,show=10,title=None):
+    def plot_word_histogram(self,freqs,show=10,title=None,save_to=None):
         """Plot a histogram of word frequencies, limited to the top `show` ones."""
         
         # Don't show the tail
@@ -277,6 +278,7 @@ class TxtWord:
         if title:
             ax.set_title(title)
         
+        if save_to:plt.savefig(save_to,dpi=300)
         plt.show()
         return ax
     
