@@ -341,7 +341,7 @@ class TxtWord:
             g.remove_nodes_from(list(nx.isolates(g)))
         return g
     
-    def plot_graph(self,wgraph, edge_label=False,pos=None, fig=None):
+    def plot_graph(self,wgraph, edge_label=False,pos=None, fig=None,save_to=None):
         """Conveniently summarize graph visually"""
         # Plot nodes with size according to count
         sizes = []
@@ -382,6 +382,7 @@ class TxtWord:
         ax.set_title('Node color:degree, size:count, edge: co-occurrence count',fontsize=18)
         ax.set_xticks([])
         ax.set_yticks([])
+        if save_to:plt.savefig(save_to,dpi=300)
         plt.show()
    
     def summarize_centrality(self,wgraph):
@@ -410,7 +411,7 @@ class TxtWord:
         
         return result
     
-    def plot_dendrogram(self,keywords,vec_list):
+    def plot_dendrogram(self,keywords,vec_list,save_to=None):
         #based on https://stackoverflow.com/questions/41462711/python-calculate-hierarchical-clustering-of-word2vec-vectors-and-plot-the-resu
         
         l = linkage(vec_list, method='ward', metric='euclidean')
@@ -427,7 +428,7 @@ class TxtWord:
             #orientation='left',
             leaf_label_func=lambda v: str(keywords[v])
         )
-        
+        if save_to:plt.savefig(save_to,dpi=300)
         plt.show()
         
     def kmeans_cluster(self,vec_list,num_clusters=3):
@@ -442,7 +443,7 @@ class TxtWord:
         RGB color; the keyword argument name must be a standard mpl colormap name.'''
         return plt.cm.get_cmap(name, n)
     
-    def plot_cluster(self,clusters,keywords,vec_list):
+    def plot_cluster(self,clusters,keywords,vec_list,save_to=None):
         from sklearn.metrics.pairwise import cosine_similarity
         from sklearn.metrics.pairwise import euclidean_distances
         dist = 1 - cosine_similarity(vec_list)
@@ -466,4 +467,5 @@ class TxtWord:
             ax.text(df.ix[i]['x'], df.ix[i]['y'], df.ix[i]['keyword'])
         
         ax.legend(numpoints=1)  #show legend with only 1 point
+        if save_to:plt.savefig(save_to,dpi=300)
         plt.show() #show the plot    
